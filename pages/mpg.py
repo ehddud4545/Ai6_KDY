@@ -43,3 +43,5 @@ st.bar_chart(mpg["mpg"])
 fig, ax = plt.subplots()
 sns.barplot(data=mpg, x="origin", y="mpg").set_title("origin 별 자동차 연비")
 st.pyplot(fig)
+
+
