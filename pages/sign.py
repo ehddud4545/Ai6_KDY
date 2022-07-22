@@ -1,94 +1,124 @@
-import cv2
-from cvzone.HandTrackingModule import HandDetector
-from cvzone.ClassificationModule import Classifier
+import streamlit as st 
+import os
+import tensorflow as tf
+
 import numpy as np
-import math
-import time
-import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+# import koreanize_matplotlib
+import seaborn as sns
+from PIL import Image
+import pillow_heif
+import cv2
+from skimage.io import imread
+from skimage.transform import resize
+
+# import splitfolders
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Dropout
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.applications.densenet import DenseNet121, preprocess_input
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+from sklearn.metrics import classification_report
+
+import glob
+import warnings
+warnings.filterwarnings("ignore")
 
 
-import streamlit as st
+st.set_page_config(
+    page_title="Likelion AI School Sign Miniproject",
+    page_icon="🐶",
+    layout="wide",
+)
+st.sidebar.markdown("SIGN SIGN")
 
-st.title("OpenCV Demo App")
-st.subheader("This app allows you to play with Image filters!")
-st.text("We use OpenCV and Streamlit for this demo")
-if st.checkbox("Main Checkbox"):
-    st.text("Check Box Active")
+st.title("SIGN")
 
-slider_value = st.slider("Slider", min_value=0.5, max_value=3.5)
-st.text(f"Slider value is {slider_value}")
+st.write("""
+SIGN
+""")
+filename = st.file_uploader("Choose a file")
 
-st.sidebar.text("text on side panel")
-st.sidebar.checkbox("Side Panel Checkbox")
+st.text(type(filename))
 
-
-
-
-
-
+model = keras.models.load_model('model/model_kor_num_no_augmentation.h5')
 
 
-
-
-# detector를 가지고 손을 인식한다
-
-try:
-    cap = cv2.VideoCapture(0)
-except:
-    cap = cv2.VideoCapture(1) # VideoCapture가 0번으로 안불러와 지는 경우를 대비해 1번으로 가져옴
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280) # 창 조절하기.
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 960)
-# hand detection
-detector = HandDetector(maxHands=1) #손 이미지를 마디마다 연결해서 분석해준다.
-classifier = Classifier("./keras_model.h5", "./labels.txt") 
- 
-offset = 20
-imgSize = 300
- 
-labels = [chr(x).upper() for x in range(97, 123)]# 숫자로 결과가 나와서 라벨을 가져와서 알파벳이랑 매칭시켜줌
-labels.remove("J")
-labels.remove("Z")
- 
-while True:
+def convert_letter(result):
+    classLabels = {idx:c for idx, c in zip(idx, alpha)}
     try:
-        # 이미지 읽어오기
-        ret, img = cap.read()
-        imgOutput = img.copy()
-        hands, img = detector.findHands(img)
-        if hands:
-            x, y, w, h = hands[0]['bbox']
-            imgWhite = np.ones((imgSize, imgSize, 3), np.uint8)*255
-            imgCrop = img[y-offset:y+h+offset, x-offset:x+w+offset]
-            aspectRatio = h/w
-            if aspectRatio>1:
-                k = imgSize/h
-                wCal = math.ceil(k*w)
-                imgResize = cv2.resize(imgCrop, (wCal, imgSize))
-                imgResizeShape = imgResize.shape
-                wGap = math.ceil((imgSize-wCal)/2)
-                imgWhite[:, wGap:wCal+wGap] = imgResize
-                # 이미지 읽어와서 인식을 한다 .getPrediction
-                prediction, index = classifier.getPrediction(imgWhite, draw=False)
-                # print(prediction, index)
-            else:
-                k = imgSize/w
-                hCal = math.ceil(k*h)
-                imgResize = cv2.resize(imgCrop, (imgSize, hCal))
-                imgResizeShape = imgResize.shape
-                hGap = math.ceil((imgSize-hCal)/2)
-                imgWhite[hGap:hCal+hGap, :] = imgResize
-                prediction, index = classifier.getPrediction(imgWhite, draw=False)
-    
-            cv2.rectangle(imgOutput, (x-offset, y-offset-50), (x-offset+90, y-offset-50+50), (255, 0, 139), cv2.FILLED)
-            cv2.putText(imgOutput, labels[index], (x, y-26), cv2.FONT_HERSHEY_COMPLEX, 2, (255, 255, 255), 2)
-            cv2.rectangle(imgOutput, (x-offset, y-offset), (x+w+offset, y+h+offset), (255, 0, 139), 4)
-            # cv2.imshow("ImageCrop", imgCrop)
-            # cv2.imshow("ImageWhite", imgWhite) -> detector 로 이미지 인식할 때 사각형을 유동적으로 바꿔준다.
-        if cv2.waitKey(1)==ord("q"): break
+        res = int(result)
+        return classLabels[res]
     except:
-        print("카메라가 경계선 밖으로 나갔습니다.")
-        break
-    cv2.imshow("Sign Detectoin", imgOutput)
-    
-cap.release()
-cv2.destroyAllWindows()
+        return "err"
+
+
+def img_resize_to_gray(filename):
+    """파일 경로를 입력 받아 사이즈 조정과 그레이로 변환하는 함수
+
+    Args:
+        filename (str): 파일 경로
+    Returns:
+        arr (np.array)
+    """
+    img = Image.open(filename)
+    img = img.convert('RGB')
+    img = img.resize((300, 300))
+    return img
+
+# def upload_and_predict(filename):
+#     # img = Image.open(filename)
+#     img = cv2.imread(filename)
+#     # img = cv2.imread(filename)
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#     img = cv2.resize(img, (300, 300))
+#     # img = Image.open(filename)
+#     # img = img.convert('RGB')
+#     # img = img.resize((300, 300))
+#     plt.figure(figsize=(4, 4))
+#     plt.imshow(img)
+#     plt.axis('off')
+
+
+#     # img = Image.open(filename)
+#     # img = img.convert('RGB')
+#     # img = img.resize((300, 300))
+#     # # show image
+#     # plt.figure(figsize=(4, 4))
+#     # plt.imshow(img)
+#     # plt.axis('off')
+#     # # predict
+#     # # img = imread(filename)
+#     # # img = preprocess_input(img)
+#     probs = model.predict(np.expand_dims(img, axis=0))
+#     return convert_letter(np.argmax(model.predict(img)))
+
+# pred = np.argmax(model.predict(img_resize_to_gray(filename).reshape(1, 300, 300, 1)))
+
+
+if filename is not None:
+    st.text(filename)
+    st.text(type(filename))
+    img = Image.open(filename)
+    img = img.convert('L')
+    img = img.resize((300, )) 
+    plt.figure(figsize=(4, 4))
+    plt.imshow(img)
+    plt.axis('off')
+
+
+
+    # img = imread(filename)
+    # img = preprocess_input(img)
+    pred = np.argmax(model.predict(img.reshape(1, 300, 300, 1)))
+    # text = []
+    st.image(img, use_column_width=False)
+    st.text(pred)
