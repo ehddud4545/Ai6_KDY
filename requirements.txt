@@ -6,3 +6,4 @@ plotly
 seaborn
 matplotlib
 koreanize_matplotlib
+cv2
