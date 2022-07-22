@@ -6,3 +6,8 @@ plotly
 seaborn
 matplotlib
 koreanize_matplotlib
+cv2
+HandDetector
+Classifier
+math
+time
