@@ -4,6 +4,7 @@ from cvzone.ClassificationModule import Classifier
 import numpy as np
 import math
 import time
+import streamlit as st
 
 # detector를 가지고 손을 인식한다
 
